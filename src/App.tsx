@@ -65,6 +65,7 @@ function MoviesBar({ title, setListOfMovies, listOfMovies }: any) {
     setSeletedMovie(title);
     setUserStars(null);
   }
+
   function handleUserStars(id: any) {
     setUserStars(id);
   }
@@ -179,6 +180,10 @@ function SelectedAndWatchedMovies({
     setWatchedMovies(updated);
   }
 
+  function handleBackButton() {
+    onSelectedMovie("");
+  }
+
   useEffect(() => {
     const fetchData = async function () {
       if (!selectedMovie) setSearchedMovie(null);
@@ -206,12 +211,13 @@ function SelectedAndWatchedMovies({
           onIsListOpen={setIsWatchedListOpen}
           open={isWatchedListOpen}
         />
-        {selectedMovie && (
+        {selectedMovie && isWatchedListOpen && (
           <MovieDescription
             searchedMovie={searchedMovie}
             onAddMovie={handleWatchedMovies}
             onUserStars={onUserStars}
             userStars={userStars}
+            onArrowClick={handleBackButton}
           />
         )}
         {isWatchedListOpen && !selectedMovie && (
@@ -304,11 +310,12 @@ function MovieDescription({
   onAddMovie,
   onUserStars,
   userStars,
+  onArrowClick,
 }: any) {
   if (!searchedMovie) return;
   return (
     <div className="no-scrollbar flex flex-col overflow-y-scroll">
-      <MoviePreview movie={searchedMovie} />
+      <MoviePreview movie={searchedMovie} onArrowClick={onArrowClick} />
       <MovieSummary
         movie={searchedMovie}
         onAddMovie={onAddMovie}
@@ -319,11 +326,17 @@ function MovieDescription({
   );
 }
 
-function MoviePreview({ movie }: any) {
+function MoviePreview({ movie, onArrowClick }: any) {
   console.log(movie);
   console.log(movie.Released);
   return (
     <div className="flex items-center gap-6 bg-gray-700 placeholder-opacity-80">
+      <button
+        className="w-6 h-6 bg-white absolute text-black left-2 top-2 outline-none"
+        onClick={onArrowClick}
+      >
+        ←
+      </button>
       <img
         src={movie.Poster}
         alt={movie.Title}
