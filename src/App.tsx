@@ -3,22 +3,34 @@ import "./App.css";
 
 function App() {
   const [title, setTitle] = useState("");
+  const [listOfmovies, setListOfMovies] = useState<any>([]);
+  console.log(listOfmovies, "=========undefined listof movies");
+
   return (
     <div className="flex flex-col items-center h-dvh bg-gray-900">
-      <SearchBar onSetTitle={setTitle} title={title} />
-      <MoviesBar title={title} />
+      <SearchBar
+        onSetTitle={setTitle}
+        title={title}
+        listOfMovies={listOfmovies}
+      />
+      <MoviesBar
+        title={title}
+        listOfMovies={listOfmovies}
+        setListOfMovies={setListOfMovies}
+      />
     </div>
   );
 }
 
 export default App;
 
-function SearchBar({ onSetTitle, title }: any) {
+function SearchBar({ onSetTitle, title, listOfMovies }: any) {
   return (
     <div className=" bg-[#6741d9] w-11/12 h-16 rounded-md mt-4 flex justify-between p-4 items-center">
       <Logo />
       <Input onSetTitle={onSetTitle} title={title} />
-      <p className="text-white">Found 0 results</p>
+
+      <p className="text-white">Found {listOfMovies.length} results</p>
     </div>
   );
 }
@@ -26,7 +38,7 @@ function SearchBar({ onSetTitle, title }: any) {
 function Logo() {
   return (
     <div className="flex gap-2">
-      <span>🍿</span>
+      <span className="text-2xl">🍿</span>
       <h1 className="font-semibold text-white text-xl">usePopcorn</h1>
     </div>
   );
@@ -42,11 +54,13 @@ function Input({ onSetTitle }: any) {
   );
 }
 
-function MoviesBar({ title }: any) {
-  const [listOfmovies, setListOfMovies] = useState([]);
+function MoviesBar({ title, setListOfMovies, listOfMovies }: any) {
   const [selectedMovie, setSeletedMovie] = useState("");
   const [userStars, setUserStars] = useState<any>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState();
 
+  console.log(listOfMovies, "inside moviesbar");
   function handleSelectMovie(title: any) {
     setSeletedMovie(title);
     setUserStars(null);
@@ -56,11 +70,14 @@ function MoviesBar({ title }: any) {
   }
 
   useEffect(() => {
+    setIsLoading(true);
     const intervalId = setTimeout(async function () {
       console.log(title, "========title");
       if (!title) {
         setListOfMovies([]);
         setSeletedMovie("");
+        setIsLoading(false);
+        return;
       }
       if (title.length == 2) return;
       const response = await fetch(
@@ -71,16 +88,22 @@ function MoviesBar({ title }: any) {
       const { Search } = await response.json();
       if (!Search) return;
       setListOfMovies(Search);
+      setIsLoading(false);
     }, 2000);
+
     return () => {
       clearTimeout(intervalId);
     };
   }, [title]);
-  console.log(listOfmovies, "===========listOfMovies");
+  console.log(listOfMovies, "===========listOfMovies");
   console.log(selectedMovie, "=========selectedMovie");
   return (
     <div className="flex flex-1 w-full gap-6  my-4  overflow-hidden">
-      <MoviesList moviesList={listOfmovies} onSelectMovie={handleSelectMovie} />
+      <MoviesList
+        moviesList={listOfMovies}
+        onSelectMovie={handleSelectMovie}
+        isLoading={isLoading}
+      />
       <SelectedAndWatchedMovies
         selectedMovie={selectedMovie}
         onSelectedMovie={setSeletedMovie}
@@ -91,20 +114,24 @@ function MoviesBar({ title }: any) {
   );
 }
 
-function MoviesList({ moviesList, onSelectMovie }: any) {
+function MoviesList({ moviesList, onSelectMovie, isLoading }: any) {
   const [isListOpen, setIsListOpen] = useState(true);
   return (
     <div className="flex flex-1 justify-end">
-      <div className="flex flex-col w-8/12 gap-0.5 rounded-lg p-2 bg-gray-800 opacity-80 overflow-y-auto relative  z-0">
-        <ToggleMovieMenu onIsListOpen={setIsListOpen} open={isListOpen} />
-        {isListOpen && (
-          <div className="">
-            {moviesList.map((movie: any) => (
-              <Movie movie={movie} onSelectMovie={onSelectMovie} />
-            ))}
-          </div>
-        )}
-      </div>
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <div className="flex flex-col w-8/12 gap-0.5 rounded-lg p-2 bg-gray-800 opacity-80 overflow-y-auto relative  z-0">
+          <ToggleMovieMenu onIsListOpen={setIsListOpen} open={isListOpen} />
+          {isListOpen && (
+            <div className="">
+              {moviesList.map((movie: any) => (
+                <Movie movie={movie} onSelectMovie={onSelectMovie} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -113,7 +140,7 @@ function Movie({ movie, onSelectMovie }: any) {
   return (
     <div
       className="flex border-b-[0.5px] bg-gray-800 border-slate-500  p-1 rounded-sm text-white gap-4 items-center cursor-pointer hover:bg-gray-600"
-      onClick={() => onSelectMovie(movie.Title)}
+      onClick={() => onSelectMovie(movie.imdbID)}
     >
       <img
         src={movie.Poster}
@@ -140,7 +167,8 @@ function SelectedAndWatchedMovies({
 
   function handleWatchedMovies(movie: any) {
     console.log(movie, "=============movie");
-    setWatchedMovies(() => [...watchedMovies, movie]);
+    const updatedMovie = { ...movie, userStars };
+    setWatchedMovies(() => [...watchedMovies, updatedMovie]);
     onSelectedMovie(null);
   }
 
@@ -155,7 +183,7 @@ function SelectedAndWatchedMovies({
     const fetchData = async function () {
       if (!selectedMovie) setSearchedMovie(null);
       const response = await fetch(
-        `http://www.omdbapi.com/?apikey=654c0727&t=${selectedMovie}`
+        `http://www.omdbapi.com/?apikey=654c0727&i=${selectedMovie}`
       );
       const searchedMovie = await response.json();
       console.log(searchedMovie, "===============searchedMovie");
@@ -190,6 +218,7 @@ function SelectedAndWatchedMovies({
           <WatchedMovieWrapper
             watchedMovies={watchedMovies}
             onFilterWatchedMovies={handleFilteredMovies}
+            userStars={userStars}
           />
         )}
       </div>
@@ -216,15 +245,19 @@ function WatchedMovieWrapper({ watchedMovies, onFilterWatchedMovies }: any) {
 
 function WatchedMovieData({ movies }: any) {
   function averageCalc(property: any, arr: any) {
-    if (!arr) return;
+    if (arr.length == 0) return 0;
     const sum = arr.reduce((acc: number, movie: any) => {
-      return acc + movie[property];
+      console.log(typeof movie.imdbRating);
+      if (movie[property] == movie["Runtime"]) {
+        movie[property] = movie[property].split(" ")[0];
+      }
+      return acc + Number(movie[property]);
     }, 0);
     let average = sum / arr.length;
-    return Number.isInteger(average) ? average : average.toFixed(2);
+    return Number.isInteger(average) ? average : average.toFixed(1);
   }
-  const rating = averageCalc("imdbRating", movies);
-  const myRating = averageCalc("myRating", movies);
+  const rating: any = averageCalc("imdbRating", movies);
+  const myRating: any = averageCalc("userStars", movies);
   const time: any = averageCalc("Runtime", movies);
 
   return (
@@ -234,7 +267,7 @@ function WatchedMovieData({ movies }: any) {
         <span>☯{movies.length} movies</span>
         <span>⭐{rating} </span>
         <span>🌟{myRating}</span>
-        <span>⌛{time}</span>
+        <span>⌛{time} min</span>
       </div>
     </div>
   );
@@ -252,8 +285,8 @@ function WatchedMovie({ movie, onFilterWatchedMovies }: any) {
         <p>{movie.Title}</p>
         <div className="flex gap-4">
           <span className="">⭐{movie.imdbRating}</span>
-          <span>🌟{movie.myRating}</span>
-          <span>⌛{movie.Runtime}</span>
+          <span>🌟{movie.userStars}</span>
+          <span>⌛{movie.Runtime} min</span>
         </div>
       </div>
       <button
@@ -380,5 +413,14 @@ function ToggleMovieMenu({ onIsListOpen, open }: any) {
     >
       {open ? "–" : "+"}
     </span>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="w-8/12 flex items-center bg-gray-800 flex-col gap-10">
+      <div className="lds-hourglass "></div>
+      <p className="text-white font-bold">Loading .....</p>
+    </div>
   );
 }
